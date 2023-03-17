@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>FakeStore eCommerce Website</title>
+  </head>
+  <body>
+   <a href="customer.html"><h1>FakeStore</h1></a> 
+    <div>
+      <button id="add-button">Add Product</button>
+      <input id="search-input" type="text" placeholder="Search...">
+      <select id="filter-select">
+        <option value="">All Categories</option>
+        <option value="electronics">Electronics</option>
+        <option value="jewelery">Jewelery</option>
+        <option value="men's clothing">Men's Clothing</option>
+        <option value="women's clothing">Women's Clothing</option>
+      </select>
+      <button id="admin-button">Admin Panel</button>
+    </div>
+    <div id="products-section"></div>
+    <div id="admin-panel" style="display: none;">
+      <h2>Admin Panel</h2>
+      <form id="add-form">
+        <label for="name-input">Name:</label>
+        <input id="name-input" type="text" required>
+        <label for="description-input">Description:</label>
+        <textarea id="description-input" required></textarea>
+        <label for="category-input">Category:</label>
+        <input id="category-input" type="text" required>
+        <label for="price-input">Price:</label>
+        <input id="price-input" type="number" step="0.01" required>
+        <button type="submit">Add Product</button>
+      </form>
+    </div>
+    <script>
+      const productsSection = document.getElementById('products-section');
+      const addButton = document.getElementById('add-button');
+      const searchInput = document.getElementById('search-input');
+      const filterSelect = document.getElementById('filter-select');
+      const adminButton = document.getElementById('admin-button');
+      const adminPanel = document.getElementById('admin-panel');
+      const addForm = document.getElementById('add-form');
+      let products = [];
+
+      function renderProducts(productsToRender) {
+        products = productsToRender;
+        productsSection.innerHTML = '';
+        for (const product of products) {
+          const productElement = document.createElement('div');
+          productElement.innerHTML = `
+            <h2>${product.title}</h2>
+            <p>${product.description}</p>
+            <p>Category: ${product.category}</p>
+            <p>Price: $${product.price.toFixed(2)}</p>
+            <button class="delete" data-id="${product.id}">Delete</button>
+            <button class="edit" data-id="${product.id}">Edit</button>
+          `;
+          productsSection.appendChild(productElement);
+        }
+      }
+
+      function addProduct(event) {
+        event.preventDefault();
+        const name = nameInput.value.trim();
+        const description = descriptionInput.value.trim();
+        const category = categoryInput.value.trim();
+        const price = Number(priceInput.value);
+        if (!name || !description || !category || isNaN(price)) {
+          alert('Please fill out all fields and enter a valid price.');
+          return;
+        }
+        const newProduct = { title: name, description, category, price };
+        fetch('https://fakestoreapi.com/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newProduct)
+        })
+          .then(response => response.json())
+          .then(product => {
+            products.push(product);
+            renderProducts(products);
+          })
+         
+        }
+
+function deleteProduct(event) {
+  const productId = event.target.dataset.id;
+  fetch(`https://fakestoreapi.com/products/${productId}`, {
+    method: 'DELETE'
+  })
+    .then(() => {
+      products = products.filter(product => product.id !== productId);
+      renderProducts(products);
+    })
+}
+
+function editProduct(event) {
+  const productId = event.target.dataset.id;
+  const productToEdit = products.find(product => product.id === productId);
+  if (!productToEdit) {
+    return;
+  }
+  const newName = prompt(`Enter a new name for ${productToEdit.title}:`);
+  if (newName === null) {
+    return;
+  }
+  const newDescription = prompt(`Enter a new description for ${productToEdit.title}:`);
+  if (newDescription === null) {
+    return;
+  }
+  const newCategory = prompt(`Enter a new category for ${productToEdit.title}:`);
+  if (newCategory === null) {
+    return;
+  }
+  let newPrice = '';
+  while (isNaN(newPrice)) {
+    newPrice = prompt(`Enter a new price for ${productToEdit.title}:`);
+    if (newPrice === null) {
+      return;
+    }
+  }
+  const editedProduct = { ...productToEdit, title: newName, description: newDescription, category: newCategory, price: Number(newPrice) };
+  fetch(`https://fakestoreapi.com/products/${productId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(editedProduct)
+  })
+    .then(response => response.json())
+    .then(product => {
+      const index = products.findIndex(product => product.id === productId);
+      products[index] = product;
+      renderProducts(products);
+    })
+}
+
+function searchProducts(event) {
+  const query = event.target.value.trim().toLowerCase();
+  const filteredProducts = products.filter(product => {
+    const title = product.title.toLowerCase();
+    const description = product.description.toLowerCase();
+    return title.includes(query) || description.includes(query);
+  });
+  renderProducts(filteredProducts);
+}
+
+function filterProducts(event) {
+  const category = event.target.value.toLowerCase();
+  if (!category) {
+    renderProducts(products);
+    return;
+  }
+  const filteredProducts = products.filter(product => product.category.toLowerCase() === category);
+  renderProducts(filteredProducts);
+}
+
+function showAdminPanel() {
+  adminPanel.style.display = 'block';
+}
+
+function hideAdminPanel() {
+  adminPanel.style.display = 'none';
+}
+
+addButton.addEventListener('click', showAdminPanel);
+addForm.addEventListener('submit', addProduct);
+productsSection.addEventListener('click', event => {
+  if (event.target.classList.contains('delete')) {
+    deleteProduct(event);
+  } else if (event.target.classList.contains('edit')) {
+    editProduct(event);
+  }
+});
+searchInput.addEventListener('input', searchProducts);
+filterSelect.addEventListener('change', filterProducts);
+adminButton.addEventListener('click', showAdminPanel);
+adminPanel.addEventListener('click', event => {
+  if (event.target === adminPanel) {
+    hideAdminPanel();
+  }
+});
+
+fetch('https://fakestoreapi.com/products')
+  .then(response => response.json())
+  .then(products => {
+    renderProducts(products);
+  })
+</script>
+
+    
+</body>
+</html>
